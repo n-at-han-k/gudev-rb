@@ -1,0 +1,46 @@
+Gudev for Ruby
+Copyright 2026 General Intelligence Systems
+
+--------------------------------------------------------------------------------
+libgudev
+--------------------------------------------------------------------------------
+
+This gem contains no extension and no copied source. The whole binding is
+GObjectIntrospection::Loader reading `GUdev-1.0.typelib` at require time and
+defining the GUdev namespace from what it finds there; the shared library the
+typelib names is the one already installed on the user's system, and the
+`gobject-introspection` gem opens it at runtime. libgudev is GNOME's GObject
+wrapper over libudev.
+
+  https://gitlab.gnome.org/GNOME/libgudev
+  Licensed under the GNU Lesser General Public License, version 2.1 or later
+
+The LGPL is a copyleft licence and this work is distributed under the Apache
+License, Version 2.0. The two coexist here because the relationship is dynamic
+use of an unmodified system library, which is what section 6 of the LGPL-2.1
+permits and what every permissively licensed GNOME application relies on. No
+libgudev source is copied into or redistributed by this gem.
+
+--------------------------------------------------------------------------------
+ruby-gnome
+--------------------------------------------------------------------------------
+
+`GUdev::Loader` is modelled on ruby-gnome's own loaders -- gtksourceview5's for
+a library that needs an init call, libsecret's for one that does not -- and the
+`gobject-introspection` and `glib2` gems it builds on come from the same
+project. They are runtime dependencies rather than vendored code.
+
+  https://github.com/ruby-gnome/ruby-gnome
+  Licensed under the GNU Lesser General Public License, version 2.1 or later
+
+--------------------------------------------------------------------------------
+glib
+--------------------------------------------------------------------------------
+
+GUdev-1.0.typelib names GObject-2.0 as its one dependency, so GLib and GObject
+are loaded alongside it and are what every type here is built on. They are
+LGPL-2.1-or-later system libraries too, and the paragraph above applies to them
+unchanged.
+
+  https://gitlab.gnome.org/GNOME/glib
+  Licensed under the GNU Lesser General Public License, version 2.1 or later

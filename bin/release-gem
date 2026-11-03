@@ -1,0 +1,88 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Released under the Apache License, Version 2.0.
+# Copyright, 2026, by General Intelligence Systems.
+
+# RELEASE-GEM(1)                     General Commands Manual                   RELEASE-GEM(1)
+#
+# NAME
+#      bin/release-gem — publish this version
+#
+# SYNOPSIS
+#      bin/release-gem
+#
+# DESCRIPTION
+#      Builds gudev-X.Y.Z.gem and pushes it, then tags the release.
+#
+#      There is one gem, not a source gem plus a precompiled gem per platform: this
+#      binding is GObjectIntrospection::Loader reading GUdev-1.0.typelib at require time,
+#      so there is nothing to compile and nothing platform-specific to carry.  That is
+#      why there is no Cross Compile workflow to download artifacts from any more.
+#
+#      Before pushing, it checks the local version is ahead of what is on RubyGems, which
+#      is the one mistake that cannot be taken back: a pushed version is pushed.  A gem
+#      which is already up is skipped rather than failed, so a release which died part
+#      way through can be run again.
+#
+#      It is not `gem kit release`, which is a single build and push with gates this
+#      script does not apply — a changelog entry for this version, no due deprecation
+#      deadline, a clean working tree — so run `gem kit release --dry-run` first to get
+#      them.
+#
+# EXIT STATUS
+#      The bin/release-gem utility exits 0 on success, and >0 if an error occurs.
+#
+# SEE ALSO
+#      bin/test(1), gem(1), .github/workflows/test.yml
+#
+# gudev                             November 3, 2026                  RELEASE-GEM(1)
+
+require_relative "../lib/gudev/version"
+require "open3"
+
+local_version = Gudev::VERSION
+gem_name = "gudev"
+gemspec = "gudev.gemspec"
+
+puts "Local version: #{local_version}"
+
+remote_output = `gem specification #{gem_name} version --remote 2>&1`
+
+if $?.success?
+  remote_version = remote_output[/version: (.+)/, 1]&.strip
+  puts "Remote version: #{remote_version}"
+
+  if Gem::Version.new(local_version) <= Gem::Version.new(remote_version)
+    abort "ERROR: Local version (#{local_version}) has not been incremented past remote (#{remote_version})"
+  end
+else
+  puts "Gem not yet published remotely, proceeding with first release"
+end
+
+puts "\nBuilding #{gem_name} #{local_version} from #{gemspec}..."
+
+system("gem build #{gemspec}") || abort("ERROR: gem build failed")
+
+gem_file = "#{gem_name}-#{local_version}.gem"
+
+puts "\nPushing #{gem_file}..."
+
+out, status = Open3.capture2e("gem", "push", gem_file)
+
+print out
+
+unless status.success?
+  if out.include?("has already been pushed")
+    puts "  (already published — skipping)"
+  else
+    abort "ERROR: gem push failed for #{gem_file}"
+  end
+end
+
+puts "\nReleased #{gem_name} #{local_version}"
+
+tag = "v#{local_version}"
+
+system("git", "tag", "-a", tag, "-m", "Release #{local_version}")
+system("git", "push", "origin", tag)
